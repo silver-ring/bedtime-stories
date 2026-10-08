@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { HEART_FILLED } from '../theme/glyphs';
 
 interface IconProps {
   color: string;
@@ -17,7 +18,7 @@ export function LibraryIcon({ color }: IconProps) {
 }
 
 export function FavoritesIcon({ color }: IconProps) {
-  return <Text style={[styles.heart, { color }]}>♥</Text>;
+  return <Text style={[styles.heart, { color }]}>{HEART_FILLED}</Text>;
 }
 
 /** A ring with a dot, standing for settings. */

@@ -32,6 +32,7 @@ import { selectStoriesStatus, selectStoryById } from '../../stories/selectors';
 import { ProgressBar } from '../components/ProgressBar';
 import { ReaderControls } from '../components/ReaderControls';
 import { offsetForFraction, scrollFraction } from '../scrollMath';
+import { HEART_FILLED, HEART_OUTLINE } from '../../../shared/theme/glyphs';
 
 interface ReaderScreenProps {
   storyId: string;
@@ -205,7 +206,7 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
           onPress={() => setControlsOpen(open => !open)}
         />
         <HeaderButton
-          label={isFavorite ? '♥' : '♡'}
+          label={isFavorite ? HEART_FILLED : HEART_OUTLINE}
           accessibilityLabel={
             isFavorite ? 'Remove from favorites' : 'Add to favorites'
           }

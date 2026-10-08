@@ -4,6 +4,7 @@ import { CATEGORY_LABELS, type Story } from '../../../types/domain';
 import { useTheme } from '../../../shared/theme/ThemeProvider';
 import { radius, spacing } from '../../../shared/theme/tokens';
 import type { ProgressEntry } from '../../progress/progressSlice';
+import { HEART_FILLED, HEART_OUTLINE } from '../../../shared/theme/glyphs';
 
 interface StoryCardProps {
   story: Story;
@@ -93,7 +94,7 @@ export function StoryCard({
             { color: isFavorite ? palette.danger : palette.textMuted },
           ]}
         >
-          {isFavorite ? '♥' : '♡'}
+          {isFavorite ? HEART_FILLED : HEART_OUTLINE}
         </Text>
       </Pressable>
     </Pressable>
