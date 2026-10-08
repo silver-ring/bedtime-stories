@@ -24,7 +24,7 @@ export interface ThemeValue {
 /** Turns the user's choice into a concrete theme; 'system' follows the device. */
 export function resolveTheme(
   choice: ThemeName,
-  systemScheme: ReturnType<typeof useColorScheme> | undefined,
+  systemScheme: 'light' | 'dark' | null | undefined,
 ): ResolvedTheme {
   if (choice !== 'system') {
     return choice;

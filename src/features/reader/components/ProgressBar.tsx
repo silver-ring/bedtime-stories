@@ -7,6 +7,7 @@ export function ProgressBar({ fraction }: { fraction: number }) {
   const percent = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
   return (
     <View
+      accessible
       accessibilityRole="progressbar"
       accessibilityLabel="Reading progress"
       accessibilityValue={{ min: 0, max: 100, now: percent }}

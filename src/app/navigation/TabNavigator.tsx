@@ -1,17 +1,16 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
 import { FavoritesScreen } from '../../features/favorites/screens/FavoritesScreen';
 import { SettingsScreen } from '../../features/settings/screens/SettingsScreen';
 import { LibraryScreen } from '../../features/stories/screens/LibraryScreen';
+import {
+  FavoritesIcon,
+  LibraryIcon,
+  SettingsIcon,
+} from '../../shared/components/TabIcons';
 import type { TabParamList } from './types';
 
 const Tab = createBottomTabNavigator<TabParamList>();
-
-const icon = (glyph: string) =>
-  function TabIcon({ color }: { color: string }) {
-    return <Text style={[styles.icon, { color }]}>{glyph}</Text>;
-  };
 
 export function TabNavigator({
   onOpenStory,
@@ -25,21 +24,19 @@ export function TabNavigator({
         options={{
           title: 'Bedtime Stories',
           tabBarLabel: 'Library',
-          tabBarIcon: icon('📚'),
+          tabBarIcon: LibraryIcon,
         }}
       >
         {() => <LibraryScreen onOpenStory={onOpenStory} />}
       </Tab.Screen>
-      <Tab.Screen name="Favorites" options={{ tabBarIcon: icon('♥') }}>
+      <Tab.Screen name="Favorites" options={{ tabBarIcon: FavoritesIcon }}>
         {() => <FavoritesScreen onOpenStory={onOpenStory} />}
       </Tab.Screen>
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ tabBarIcon: icon('⚙') }}
+        options={{ tabBarIcon: SettingsIcon }}
       />
     </Tab.Navigator>
   );
 }
-
-const styles = StyleSheet.create({ icon: { fontSize: 20 } });
