@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { HEART_FILLED } from '../theme/glyphs';
+import { StyleSheet, View } from 'react-native';
 
 interface IconProps {
   color: string;
@@ -17,8 +16,21 @@ export function LibraryIcon({ color }: IconProps) {
   );
 }
 
+/**
+ * A heart built from two rotated rounded rectangles. A text glyph would be
+ * swapped for a color emoji on Android and ignore the tab color.
+ */
 export function FavoritesIcon({ color }: IconProps) {
-  return <Text style={[styles.heart, { color }]}>{HEART_FILLED}</Text>;
+  return (
+    <View style={styles.heart}>
+      <View
+        style={[styles.lobe, styles.lobeLeft, { backgroundColor: color }]}
+      />
+      <View
+        style={[styles.lobe, styles.lobeRight, { backgroundColor: color }]}
+      />
+    </View>
+  );
 }
 
 /** A ring with a dot, standing for settings. */
@@ -38,7 +50,25 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   bar: { height: 3, borderRadius: 2 },
-  heart: { fontSize: 22, lineHeight: 24 },
+  heart: { width: 24, height: 22 },
+  lobe: {
+    position: 'absolute',
+    top: 0,
+    width: 11,
+    height: 17,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+  },
+  lobeLeft: {
+    left: 12,
+    transform: [{ rotate: '-45deg' }],
+    transformOrigin: '0% 100%',
+  },
+  lobeRight: {
+    left: 1,
+    transform: [{ rotate: '45deg' }],
+    transformOrigin: '100% 100%',
+  },
   ring: {
     width: 22,
     height: 22,
