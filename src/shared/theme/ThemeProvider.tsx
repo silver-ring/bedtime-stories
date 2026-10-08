@@ -9,7 +9,7 @@ import React, {
   useMemo,
   type ReactNode,
 } from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, type ColorSchemeName } from 'react-native';
 import { useAppSelector } from '../../app/hooks';
 import type { ThemeName } from '../../types/domain';
 import { palettes, type Palette, type ResolvedTheme } from './tokens';
@@ -24,7 +24,7 @@ export interface ThemeValue {
 /** Turns the user's choice into a concrete theme; 'system' follows the device. */
 export function resolveTheme(
   choice: ThemeName,
-  systemScheme: 'light' | 'dark' | null | undefined,
+  systemScheme: ColorSchemeName | null | undefined,
 ): ResolvedTheme {
   if (choice !== 'system') {
     return choice;
