@@ -27,6 +27,8 @@ export type RootState = ReturnType<typeof rootReducer>;
 export interface StoreDeps {
   repository: StoryRepository;
   storage: KeyValueStorage;
+  /** How long changes settle before they are written. Tests shorten it. */
+  saveDebounceMs?: number;
 }
 
 /**
@@ -35,10 +37,10 @@ export interface StoreDeps {
  * called, so defaults can never overwrite saved data.
  */
 export function makeStore(
-  { repository, storage }: StoreDeps,
+  { repository, storage, saveDebounceMs }: StoreDeps,
   preloadedState?: Partial<PersistedSlices>,
 ) {
-  const persistence = createPersistenceListener(storage);
+  const persistence = createPersistenceListener(storage, saveDebounceMs);
   const extra: ThunkExtra = { repository };
   return configureStore({
     reducer: rootReducer,

@@ -142,14 +142,17 @@ const PERSISTED_PREFIXES = ['favorites/', 'progress/', 'readerSettings/'];
  * Saves the persisted slices after changes settle. Rapid actions (for example
  * scroll progress) are collapsed into a single write.
  */
-export function createPersistenceListener(storage: KeyValueStorage) {
+export function createPersistenceListener(
+  storage: KeyValueStorage,
+  debounceMs: number = SAVE_DEBOUNCE_MS,
+) {
   const listener = createListenerMiddleware<PersistedSlices>();
   listener.startListening({
     predicate: action =>
       PERSISTED_PREFIXES.some(prefix => action.type.startsWith(prefix)),
     effect: async (_action, api) => {
       api.cancelActiveListeners();
-      await api.delay(SAVE_DEBOUNCE_MS);
+      await api.delay(debounceMs);
       await savePersistedState(storage, api.getState());
     },
   });

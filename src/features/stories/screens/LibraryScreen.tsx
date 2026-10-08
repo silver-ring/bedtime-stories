@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import {
+  FlatList,
+  Keyboard,
+  RefreshControl,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import { EmptyView } from '../../../shared/components/EmptyView';
 import { ErrorView } from '../../../shared/components/ErrorView';
@@ -66,6 +72,7 @@ export function LibraryScreen({
   }, [dispatch]);
 
   const clearFilters = useCallback(() => {
+    Keyboard.dismiss();
     setText('');
     dispatch(filterCleared());
   }, [dispatch]);

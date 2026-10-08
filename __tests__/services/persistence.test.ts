@@ -78,14 +78,21 @@ describe('persistence listener', () => {
   it('U10: collapses rapid actions into one write with the latest state', async () => {
     const storage = createMemoryStorage();
     const setItem = jest.spyOn(storage, 'setItem');
-    const { store } = makeTestStore({ storage });
+    const { store } = makeTestStore({
+      storage,
+      saveDebounceMs: SAVE_DEBOUNCE_MS,
+    });
 
     store.dispatch(progressUpdated({ id: 'a', fraction: 0.1 }));
     store.dispatch(progressUpdated({ id: 'a', fraction: 0.2 }));
     store.dispatch(progressUpdated({ id: 'a', fraction: 0.6 }));
     expect(setItem).not.toHaveBeenCalled();
 
-    await jest.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS + 10);
+    // Nothing is written until the full debounce window has passed.
+    await jest.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS - 1);
+    expect(setItem).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(10);
     expect(setItem).toHaveBeenCalledTimes(1);
 
     const saved = JSON.parse(storage.dump()[STORAGE_KEY] ?? '{}');
@@ -102,7 +109,10 @@ describe('persistence listener', () => {
   it('U10: ignores actions from non-persisted slices', async () => {
     const storage = createMemoryStorage();
     const setItem = jest.spyOn(storage, 'setItem');
-    const { store } = makeTestStore({ storage });
+    const { store } = makeTestStore({
+      storage,
+      saveDebounceMs: SAVE_DEBOUNCE_MS,
+    });
     await store.dispatch(fetchStories());
     await jest.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS + 10);
     expect(setItem).not.toHaveBeenCalled();
@@ -112,7 +122,10 @@ describe('persistence listener', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const storage = createMemoryStorage();
     jest.spyOn(storage, 'setItem').mockRejectedValue(new Error('disk full'));
-    const { store } = makeTestStore({ storage });
+    const { store } = makeTestStore({
+      storage,
+      saveDebounceMs: SAVE_DEBOUNCE_MS,
+    });
 
     store.dispatch(toggleFavorite('a'));
     await jest.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS + 10);
@@ -125,7 +138,10 @@ describe('persistence listener', () => {
 
   it('U12: a new store built from saved state matches the old one', async () => {
     const storage = createMemoryStorage();
-    const first = makeTestStore({ storage }).store;
+    const first = makeTestStore({
+      storage,
+      saveDebounceMs: SAVE_DEBOUNCE_MS,
+    }).store;
     first.dispatch(toggleFavorite('snow'));
     first.dispatch(progressUpdated({ id: 'snow', fraction: 0.42 }));
     first.dispatch(themeSet('sepia'));

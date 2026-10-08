@@ -37,12 +37,17 @@ interface TestStoreOptions {
   repository?: StoryRepository;
   storage?: ReturnType<typeof createMemoryStorage>;
   preloaded?: Partial<PersistedSlices>;
+  /** Defaults to 0 so UI tests leave no pending timers behind. */
+  saveDebounceMs?: number;
 }
 
 export function makeTestStore(options: TestStoreOptions = {}) {
   const repository = options.repository ?? new FakeRepository();
   const storage = options.storage ?? createMemoryStorage();
-  const store = makeStore({ repository, storage }, options.preloaded);
+  const store = makeStore(
+    { repository, storage, saveDebounceMs: options.saveDebounceMs ?? 0 },
+    options.preloaded,
+  );
   return { store, repository, storage };
 }
 

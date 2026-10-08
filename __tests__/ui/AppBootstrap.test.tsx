@@ -1,6 +1,6 @@
-import { act, screen } from '@testing-library/react-native';
-import { render } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppBootstrap } from '../../src/app/AppBootstrap';
 import { STORAGE_KEY, STORAGE_VERSION } from '../../src/services/persistence';
@@ -58,5 +58,39 @@ describe('AppBootstrap', () => {
       ),
     ).toBeTruthy();
     await act(async () => {});
+  });
+
+  it('writes immediately when the app goes to the background', async () => {
+    let onChange: ((state: AppStateStatus) => void) | undefined;
+    const subscription = jest
+      .spyOn(AppState, 'addEventListener')
+      .mockImplementation((_type, listener) => {
+        onChange = listener;
+        return { remove: jest.fn() };
+      });
+    const storage = createMemoryStorage();
+    const setItem = jest.spyOn(storage, 'setItem');
+
+    await render(
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <AppBootstrap storage={storage} repository={new FakeRepository()} />
+      </SafeAreaProvider>,
+    );
+    await fireEvent.press(
+      await screen.findByLabelText(
+        'Add The Hare and the Tortoise to favorites',
+      ),
+    );
+    // Well inside the 500 ms debounce window: nothing written yet.
+    expect(setItem).not.toHaveBeenCalled();
+
+    await act(async () => {
+      onChange?.('background');
+    });
+
+    expect(setItem).toHaveBeenCalledTimes(1);
+    const saved = JSON.parse(storage.dump()[STORAGE_KEY] ?? '{}');
+    expect(saved.favorites.ids).toEqual(['hare']);
+    subscription.mockRestore();
   });
 });

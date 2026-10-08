@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
   },
-  optionLabel: { fontSize: 16, fontWeight: '600' },
+  optionLabel: { fontSize: 16, fontWeight: '600', flexShrink: 1 },
   radio: { fontSize: 18 },
   stepper: {
     flexDirection: 'row',

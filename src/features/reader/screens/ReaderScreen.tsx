@@ -80,6 +80,10 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
   const viewportHeight = useRef(0);
   const restored = useRef(false);
   const lastSaved = useRef<number | null>(null);
+  // Share of the text above the top of the screen, remembered while the text
+  // is re-laid out (a size change) so we can return to the same place.
+  const anchorRatio = useRef<number | null>(null);
+  const previousFontScale = useRef(fontScale);
 
   const currentFraction = useCallback(
     () =>
@@ -162,10 +166,42 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
   const onContentSizeChange = useCallback(
     (_width: number, height: number) => {
       contentHeight.current = height;
-      tryRestore();
+      if (!restored.current) {
+        tryRestore();
+        return;
+      }
+      const ratio = anchorRatio.current;
+      if (ratio === null || height <= 0) {
+        return;
+      }
+      // The text just changed size: keep the same passage at the top.
+      const y = Math.min(
+        ratio * height,
+        Math.max(0, height - viewportHeight.current),
+      );
+      offsetY.current = y;
+      scrollRef.current?.scrollTo({ y, animated: false });
+      setFraction(currentFraction());
     },
-    [tryRestore],
+    [currentFraction, tryRestore],
   );
+
+  // Runs after the render that carries the new font scale and before the new
+  // layout is measured, so the offset and height are still the old ones.
+  useEffect(() => {
+    if (previousFontScale.current === fontScale) {
+      return;
+    }
+    previousFontScale.current = fontScale;
+    anchorRatio.current =
+      restored.current && contentHeight.current > 0
+        ? offsetY.current / contentHeight.current
+        : null;
+  }, [fontScale]);
+
+  const onScrollBeginDrag = useCallback(() => {
+    anchorRatio.current = null;
+  }, []);
 
   // Save when leaving the screen or when the app goes to the background.
   useEffect(() => {
@@ -222,6 +258,7 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
         onLayout={onViewportLayout}
         onContentSizeChange={onContentSizeChange}
         onScroll={onScroll}
+        onScrollBeginDrag={onScrollBeginDrag}
         scrollEventThrottle={32}
         onMomentumScrollEnd={commit}
         onScrollEndDrag={commit}

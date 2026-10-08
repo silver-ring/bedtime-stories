@@ -9,6 +9,7 @@ import { selectContinueReading } from '../../src/features/progress/selectors';
 import {
   fontScaleDecreased,
   fontScaleIncreased,
+  snapFontScale,
   themeSet,
 } from '../../src/features/settings/readerSettingsSlice';
 import { fetchStories } from '../../src/features/stories/storiesSlice';
@@ -53,6 +54,14 @@ describe('progress', () => {
     expect(store.getState().progress.byStoryId.a?.fraction).toBe(0);
   });
 
+  it('U6: completion starts exactly at the 0.98 threshold', () => {
+    const { store } = makeTestStore();
+    store.dispatch(progressUpdated({ id: 'a', fraction: 0.98 }));
+    expect(store.getState().progress.byStoryId.a?.completed).toBe(true);
+    store.dispatch(progressUpdated({ id: 'a', fraction: 0.9799 }));
+    expect(store.getState().progress.byStoryId.a?.completed).toBe(false);
+  });
+
   it('U6: reset removes one entry and clear removes all', () => {
     const { store } = makeTestStore();
     store.dispatch(progressUpdated({ id: 'a', fraction: 0.5 }));
@@ -87,6 +96,15 @@ describe('progress', () => {
 });
 
 describe('reader settings', () => {
+  it('U7: snapFontScale picks the nearest step and survives bad numbers', () => {
+    expect(snapFontScale(1.2)).toBe(1.15);
+    expect(snapFontScale(1.45)).toBe(1.5);
+    expect(snapFontScale(100)).toBe(1.75);
+    expect(snapFontScale(-5)).toBe(0.85);
+    expect(snapFontScale(Number.NaN)).toBe(1);
+    expect(snapFontScale(Number.POSITIVE_INFINITY)).toBe(1);
+  });
+
   it('U7: font scale stops at the smallest and largest step', () => {
     const { store } = makeTestStore();
     for (let i = 0; i < 20; i++) {

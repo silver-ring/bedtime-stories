@@ -14,7 +14,7 @@ interface StoryCardProps {
   onToggleFavorite: (id: string) => void;
 }
 
-function progressLabel(progress: ProgressEntry | undefined): string | null {
+function progressText(progress: ProgressEntry | undefined): string | null {
   if (!progress) {
     return null;
   }
@@ -25,6 +25,22 @@ function progressLabel(progress: ProgressEntry | undefined): string | null {
   return percent > 0 ? `${percent}% read` : null;
 }
 
+function describe(story: Story, progress: ProgressEntry | undefined): string {
+  const base = `${story.title} by ${story.author}, ${story.readingMinutes} minute read`;
+  if (!progress) {
+    return base;
+  }
+  if (progress.completed) {
+    return `${base}, finished`;
+  }
+  const percent = Math.round(progress.fraction * 100);
+  return percent > 0 ? `${base}, ${percent} percent read` : base;
+}
+
+/**
+ * The favorite button is a sibling of the card button, not a child. Nesting one
+ * accessible button in another hides the inner one from VoiceOver on iOS.
+ */
 export function StoryCard({
   story,
   progress,
@@ -33,22 +49,20 @@ export function StoryCard({
   onToggleFavorite,
 }: StoryCardProps) {
   const { palette } = useTheme();
-  const status = progressLabel(progress);
+  const status = progressText(progress);
   return (
-    <Pressable
-      onPress={() => onPress(story.id)}
-      accessibilityRole="button"
-      accessibilityLabel={`${story.title} by ${story.author}, ${story.readingMinutes} minute read`}
-      style={({ pressed }) => [
+    <View
+      style={[
         styles.card,
-        {
-          backgroundColor: palette.surface,
-          borderColor: palette.border,
-          opacity: pressed ? 0.85 : 1,
-        },
+        { backgroundColor: palette.surface, borderColor: palette.border },
       ]}
     >
-      <View style={styles.body}>
+      <Pressable
+        onPress={() => onPress(story.id)}
+        accessibilityRole="button"
+        accessibilityLabel={describe(story, progress)}
+        style={({ pressed }) => [styles.body, pressed && styles.pressed]}
+      >
         <Text style={[styles.title, { color: palette.text }]} numberOfLines={2}>
           {story.title}
         </Text>
@@ -63,19 +77,25 @@ export function StoryCard({
         </Text>
         <View style={styles.chips}>
           <View style={[styles.chip, { backgroundColor: palette.chip }]}>
-            <Text style={[styles.chipText, { color: palette.chipText }]}>
+            <Text
+              maxFontSizeMultiplier={1.5}
+              style={[styles.chipText, { color: palette.chipText }]}
+            >
               {story.readingMinutes} min read
             </Text>
           </View>
           {status ? (
             <View style={[styles.chip, { backgroundColor: palette.chip }]}>
-              <Text style={[styles.chipText, { color: palette.chipText }]}>
+              <Text
+                maxFontSizeMultiplier={1.5}
+                style={[styles.chipText, { color: palette.chipText }]}
+              >
                 {status}
               </Text>
             </View>
           ) : null}
         </View>
-      </View>
+      </Pressable>
       <Pressable
         onPress={() => onToggleFavorite(story.id)}
         hitSlop={8}
@@ -97,7 +117,7 @@ export function StoryCard({
           {isFavorite ? HEART_FILLED : HEART_OUTLINE}
         </Text>
       </Pressable>
-    </Pressable>
+    </View>
   );
 }
 
@@ -106,11 +126,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: radius.md,
     borderWidth: 1,
-    padding: spacing.lg,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  body: { flex: 1, gap: spacing.xs },
+  body: { flex: 1, gap: spacing.xs, padding: spacing.lg },
+  pressed: { opacity: 0.85 },
   title: { fontSize: 18, fontWeight: '700' },
   meta: { fontSize: 13 },
   summary: { fontSize: 14, lineHeight: 20, marginTop: spacing.xs },
@@ -121,6 +141,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   chipText: { fontSize: 12, fontWeight: '600' },
-  heart: { marginLeft: spacing.md, minWidth: 44, alignItems: 'center' },
+  heart: {
+    minWidth: 56,
+    paddingTop: spacing.lg,
+    paddingRight: spacing.sm,
+    alignItems: 'center',
+  },
   heartGlyph: { fontSize: 28 },
 });

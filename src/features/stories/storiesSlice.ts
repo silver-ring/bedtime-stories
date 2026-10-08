@@ -75,7 +75,11 @@ export const fetchStories = createAppAsyncThunk<
         simulateFailure: getState().dev.simulateFailure,
       });
     } catch (error) {
-      return rejectWithValue(toAppError(error));
+      const appError = toAppError(error);
+      if (__DEV__) {
+        console.log(`[stories] fetch failed ${appError.code}`);
+      }
+      return rejectWithValue(appError);
     }
   },
   {

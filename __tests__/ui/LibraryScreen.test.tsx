@@ -105,4 +105,32 @@ describe('LibraryScreen', () => {
     await fireEvent.press(card);
     expect(onOpenStory).toHaveBeenCalledWith('snow');
   });
+
+  it('describes reading progress in the card label, with the heart as its own button', async () => {
+    const { store } = makeTestStore({
+      preloaded: {
+        progress: {
+          byStoryId: {
+            snow: { fraction: 0.4, updatedAt: 10, completed: false },
+            hare: { fraction: 1, updatedAt: 5, completed: true },
+          },
+        },
+      },
+    });
+    await renderWithStore(<LibraryScreen onOpenStory={jest.fn()} />, store);
+
+    expect(
+      await screen.findByLabelText(
+        'The Snow Queen by Hans Christian Andersen, 12 minute read, 40 percent read',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        'The Hare and the Tortoise by Aesop, 1 minute read, finished',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText('Add The Snow Queen to favorites'),
+    ).toBeTruthy();
+  });
 });

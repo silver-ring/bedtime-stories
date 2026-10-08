@@ -18,7 +18,14 @@ export function TabNavigator({
   onOpenStory: (storyId: string) => void;
 }) {
   return (
-    <Tab.Navigator screenOptions={{ headerTitleAlign: 'center' }}>
+    <Tab.Navigator
+      screenOptions={{
+        headerTitleAlign: 'center',
+        // Large system text would clip the fixed-height header and tab bar.
+        headerTitleAllowFontScaling: false,
+        tabBarAllowFontScaling: false,
+      }}
+    >
       <Tab.Screen
         name="Library"
         options={{

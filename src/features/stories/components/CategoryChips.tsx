@@ -23,6 +23,7 @@ export function CategoryChips({ selected, onSelect }: CategoryChipsProps) {
   return (
     <ScrollView
       horizontal
+      keyboardShouldPersistTaps="handled"
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
     >

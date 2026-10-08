@@ -1,5 +1,6 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import React from 'react';
+import { ScrollView } from 'react-native';
 import { progressUpdated } from '../../src/features/progress/progressSlice';
 import { ReaderScreen } from '../../src/features/reader/screens/ReaderScreen';
 import { fetchStories } from '../../src/features/stories/storiesSlice';
@@ -196,5 +197,71 @@ describe('ReaderScreen', () => {
     await fireEvent.press(screen.getByLabelText('Add to favorites'));
     expect(store.getState().favorites.ids).toEqual(['hare']);
     expect(screen.getByLabelText('Remove from favorites')).toBeTruthy();
+  });
+
+  it('does not save again when the position has not changed', async () => {
+    const store = await loadedStore();
+    const dispatch = jest.spyOn(store, 'dispatch');
+    await renderWithStore(
+      <ReaderScreen storyId="hare" onBack={jest.fn()} />,
+      store,
+    );
+
+    const scroll = await layOut(2000, 500);
+    await fireEvent.scroll(scroll, metrics(750, 2000, 500));
+    await fireEvent(scroll, 'momentumScrollEnd');
+    await fireEvent(scroll, 'momentumScrollEnd');
+    await fireEvent(scroll, 'scrollEndDrag');
+
+    const saves = dispatch.mock.calls.filter(
+      ([action]) =>
+        typeof action === 'object' &&
+        'type' in action &&
+        action.type === 'progress/progressUpdated',
+    );
+    expect(saves).toHaveLength(1);
+  });
+
+  it('keeps the same passage at the top when the text size changes', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
+    const store = await loadedStore();
+    await renderWithStore(
+      <ReaderScreen storyId="hare" onBack={jest.fn()} />,
+      store,
+    );
+
+    // Reading 1000 px into 2000 px of text on a 500 px screen.
+    const scroll = await layOut(2000, 500);
+    await fireEvent.scroll(scroll, metrics(1000, 2000, 500));
+    scrollTo.mockClear();
+
+    await fireEvent.press(screen.getByLabelText('Reading settings'));
+    await fireEvent.press(screen.getByLabelText('Increase text size'));
+    // The larger text makes the content 2600 px tall.
+    await fireEvent(scroll, 'contentSizeChange', 390, 2600);
+
+    // Same share of the text above the screen: 1000/2000 of 2600.
+    expect(scrollTo).toHaveBeenLastCalledWith({ y: 1300, animated: false });
+    scrollTo.mockRestore();
+  });
+
+  it('stops re-anchoring once the reader scrolls by hand', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
+    const store = await loadedStore();
+    await renderWithStore(
+      <ReaderScreen storyId="hare" onBack={jest.fn()} />,
+      store,
+    );
+
+    const scroll = await layOut(2000, 500);
+    await fireEvent.scroll(scroll, metrics(1000, 2000, 500));
+    await fireEvent.press(screen.getByLabelText('Reading settings'));
+    await fireEvent.press(screen.getByLabelText('Increase text size'));
+    await fireEvent(scroll, 'scrollBeginDrag');
+    scrollTo.mockClear();
+    await fireEvent(scroll, 'contentSizeChange', 390, 2600);
+
+    expect(scrollTo).not.toHaveBeenCalled();
+    scrollTo.mockRestore();
   });
 });

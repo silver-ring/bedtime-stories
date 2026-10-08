@@ -33,6 +33,7 @@ export function Button({
       ]}
     >
       <Text
+        maxFontSizeMultiplier={1.5}
         style={[
           styles.label,
           { color: primary ? palette.onAccent : palette.text },
