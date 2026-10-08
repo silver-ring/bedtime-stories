@@ -264,4 +264,66 @@ describe('ReaderScreen', () => {
     expect(scrollTo).not.toHaveBeenCalled();
     scrollTo.mockRestore();
   });
+
+  it('ignores the transitional scroll events a re-layout produces', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
+    const store = await loadedStore();
+    await renderWithStore(
+      <ReaderScreen storyId="hare" onBack={jest.fn()} />,
+      store,
+    );
+
+    // Reading exactly halfway.
+    const scroll = await layOut(2000, 500);
+    await fireEvent.scroll(scroll, metrics(1000, 2000, 500));
+
+    // First size change: the scroll view clamps to the end while it re-lays out.
+    await fireEvent.press(screen.getByLabelText('Reading settings'));
+    await fireEvent.press(screen.getByLabelText('Increase text size'));
+    await fireEvent.scroll(scroll, metrics(1100, 1600, 500));
+    // Second size change arrives before the first has settled.
+    await fireEvent.press(screen.getByLabelText('Increase text size'));
+    scrollTo.mockClear();
+    await fireEvent(scroll, 'contentSizeChange', 390, 3000);
+
+    // Still anchored to the halfway point, not the clamped end.
+    expect(scrollTo).toHaveBeenLastCalledWith({ y: 1500, animated: false });
+    scrollTo.mockRestore();
+  });
+
+  it('saves the anchored position, not a clamped one, if closed mid re-layout', async () => {
+    const store = await loadedStore();
+    const view = await renderWithStore(
+      <ReaderScreen storyId="hare" onBack={jest.fn()} />,
+      store,
+    );
+
+    const scroll = await layOut(2000, 500);
+    await fireEvent.scroll(scroll, metrics(1000, 2000, 500));
+    await fireEvent.press(screen.getByLabelText('Reading settings'));
+    await fireEvent.press(screen.getByLabelText('Increase text size'));
+    await fireEvent.scroll(scroll, metrics(1100, 1600, 500));
+    await act(async () => {
+      view.unmount();
+    });
+
+    const saved = store.getState().progress.byStoryId.hare;
+    expect(saved?.completed).toBe(false);
+    // Halfway through 1600 px of text on a 500 px screen: 800 / 1100.
+    expect(saved?.fraction).toBeCloseTo(800 / 1100);
+  });
+
+  it('does not create an empty progress entry for a story that was only opened', async () => {
+    const store = await loadedStore();
+    const view = await renderWithStore(
+      <ReaderScreen storyId="hare" onBack={jest.fn()} />,
+      store,
+    );
+    await layOut(2000, 500);
+    await act(async () => {
+      view.unmount();
+    });
+
+    expect(store.getState().progress.byStoryId.hare).toBeUndefined();
+  });
 });

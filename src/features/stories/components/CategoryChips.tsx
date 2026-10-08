@@ -44,6 +44,7 @@ export function CategoryChips({ selected, onSelect }: CategoryChipsProps) {
             ]}
           >
             <Text
+              maxFontSizeMultiplier={1.5}
               style={[
                 styles.label,
                 { color: active ? palette.onAccent : palette.chipText },

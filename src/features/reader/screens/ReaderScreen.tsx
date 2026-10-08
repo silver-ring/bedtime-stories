@@ -80,20 +80,34 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
   const viewportHeight = useRef(0);
   const restored = useRef(false);
   const lastSaved = useRef<number | null>(null);
-  // Share of the text above the top of the screen, remembered while the text
-  // is re-laid out (a size change) so we can return to the same place.
-  const anchorRatio = useRef<number | null>(null);
+  // How far into the text the top of the screen is (0 to 1 of the content
+  // height). Only real scrolling updates it. A text size change re-lays out the
+  // text and the scroll view then emits clamped, transitional scroll events;
+  // those must not move it, or a later size change would anchor to garbage.
+  const anchorRatio = useRef(0);
+  const settling = useRef(false);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousFontScale = useRef(fontScale);
 
-  const currentFraction = useCallback(
-    () =>
-      scrollFraction(
-        offsetY.current,
-        contentHeight.current,
-        viewportHeight.current,
-      ),
-    [],
-  );
+  const endSettlingAfter = useCallback((ms: number) => {
+    if (settleTimer.current) {
+      clearTimeout(settleTimer.current);
+    }
+    settleTimer.current = setTimeout(() => {
+      settling.current = false;
+      settleTimer.current = null;
+    }, ms);
+  }, []);
+
+  const currentFraction = useCallback(() => {
+    const content = contentHeight.current;
+    const viewport = viewportHeight.current;
+    // While the layout settles the scroll offset is unreliable: use the anchor.
+    const offset = settling.current
+      ? Math.min(anchorRatio.current * content, Math.max(0, content - viewport))
+      : offsetY.current;
+    return scrollFraction(offset, content, viewport);
+  }, []);
 
   // Saves the position, but only once the saved one has been restored, and
   // only if it changed, so opening a story never overwrites progress with 0.
@@ -102,6 +116,10 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
       return;
     }
     const value = currentFraction();
+    // Nothing saved yet and nothing read yet: do not create an empty entry.
+    if (lastSaved.current === null && value < 0.001) {
+      return;
+    }
     if (
       lastSaved.current !== null &&
       Math.abs(value - lastSaved.current) < 0.001
@@ -131,6 +149,7 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
       viewportHeight.current,
     );
     offsetY.current = y;
+    anchorRatio.current = y / contentHeight.current;
     setFraction(startFraction);
     if (y > 0) {
       scrollRef.current?.scrollTo({ y, animated: false });
@@ -148,7 +167,9 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
       offsetY.current = contentOffset.y;
       contentHeight.current = contentSize.height;
       viewportHeight.current = layoutMeasurement.height;
-      if (restored.current) {
+      if (restored.current && !settling.current) {
+        anchorRatio.current =
+          contentSize.height > 0 ? contentOffset.y / contentSize.height : 0;
         setFraction(currentFraction());
       }
     },
@@ -170,38 +191,54 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
         tryRestore();
         return;
       }
-      const ratio = anchorRatio.current;
-      if (ratio === null || height <= 0) {
+      if (!settling.current || height <= 0) {
         return;
       }
-      // The text just changed size: keep the same passage at the top.
+      // The text just changed size: keep the same passage at the top. The
+      // layout may report a few sizes in a row, so re-apply until it is quiet.
       const y = Math.min(
-        ratio * height,
+        anchorRatio.current * height,
         Math.max(0, height - viewportHeight.current),
       );
       offsetY.current = y;
       scrollRef.current?.scrollTo({ y, animated: false });
       setFraction(currentFraction());
+      endSettlingAfter(400);
     },
-    [currentFraction, tryRestore],
+    [currentFraction, endSettlingAfter, tryRestore],
   );
 
-  // Runs after the render that carries the new font scale and before the new
-  // layout is measured, so the offset and height are still the old ones.
+  // A new font scale means the text is about to be re-laid out. Start ignoring
+  // scroll events for the position until the layout has settled. The timer
+  // covers the case where no size change is reported at all.
   useEffect(() => {
     if (previousFontScale.current === fontScale) {
       return;
     }
     previousFontScale.current = fontScale;
-    anchorRatio.current =
-      restored.current && contentHeight.current > 0
-        ? offsetY.current / contentHeight.current
-        : null;
-  }, [fontScale]);
+    if (restored.current) {
+      settling.current = true;
+      endSettlingAfter(1000);
+    }
+  }, [endSettlingAfter, fontScale]);
 
+  // The reader took over: from here on their scrolling is the truth again.
   const onScrollBeginDrag = useCallback(() => {
-    anchorRatio.current = null;
+    settling.current = false;
+    if (settleTimer.current) {
+      clearTimeout(settleTimer.current);
+      settleTimer.current = null;
+    }
   }, []);
+
+  useEffect(
+    () => () => {
+      if (settleTimer.current) {
+        clearTimeout(settleTimer.current);
+      }
+    },
+    [],
+  );
 
   // Save when leaving the screen or when the app goes to the background.
   useEffect(() => {
