@@ -326,29 +326,4 @@ describe('ReaderScreen', () => {
 
     expect(store.getState().progress.byStoryId.hare).toBeUndefined();
   });
-
-  it('corrects the position once the layout settles if the last scroll landed wrong', async () => {
-    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
-    const store = await loadedStore();
-    await renderWithStore(
-      <ReaderScreen storyId="hare" onBack={jest.fn()} />,
-      store,
-    );
-
-    const scroll = await layOut(2000, 500);
-    await fireEvent.scroll(scroll, metrics(1000, 2000, 500));
-    await fireEvent.press(screen.getByLabelText('Reading settings'));
-    await fireEvent.press(screen.getByLabelText('Increase text size'));
-    await fireEvent(scroll, 'contentSizeChange', 390, 2600);
-    // The native view ended up somewhere else than the scrollTo asked for.
-    await fireEvent.scroll(scroll, metrics(900, 2600, 500));
-    scrollTo.mockClear();
-
-    await act(async () => {
-      await new Promise<void>(resolve => setTimeout(resolve, 600));
-    });
-
-    expect(scrollTo).toHaveBeenCalledWith({ y: 1300, animated: false });
-    scrollTo.mockRestore();
-  });
 });

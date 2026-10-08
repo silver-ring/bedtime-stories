@@ -96,20 +96,6 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
     settleTimer.current = setTimeout(() => {
       settling.current = false;
       settleTimer.current = null;
-      const content = contentHeight.current;
-      if (content <= 0) {
-        return;
-      }
-      // A size can be reported before the layout is final, so the last scroll
-      // may have landed in the wrong place. Check once more now that it is quiet.
-      const target = Math.min(
-        anchorRatio.current * content,
-        Math.max(0, content - viewportHeight.current),
-      );
-      if (Math.abs(offsetY.current - target) > 1) {
-        offsetY.current = target;
-        scrollRef.current?.scrollTo({ y: target, animated: false });
-      }
     }, ms);
   }, []);
 
