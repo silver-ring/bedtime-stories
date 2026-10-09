@@ -46,9 +46,13 @@ export function makeStore(
     reducer: rootReducer,
     preloadedState,
     middleware: getDefaultMiddleware =>
-      getDefaultMiddleware({ thunk: { extraArgument: extra } }).prepend(
-        persistence.middleware,
-      ),
+      getDefaultMiddleware({
+        thunk: { extraArgument: extra },
+        // The stories slice holds about 200 KB of text, so the development-only
+        // state checks need more than the default 32 ms on a busy device.
+        immutableCheck: { warnAfter: 128 },
+        serializableCheck: { warnAfter: 128 },
+      }).prepend(persistence.middleware),
   });
 }
 
