@@ -14,6 +14,21 @@ keep favorites, and pick up where you left off after the app is closed.
 - **Offline**: all stories ship inside the app. No network is used.
 - **Persistence**: favorites, progress and settings survive restarts.
 
+## Screenshots
+
+iOS (iPhone 17 Pro simulator) on the left, Android (Pixel 7 emulator) on the right.
+
+| | |
+| --- | --- |
+| **Library**: search, category chips<br>![Library](docs/screenshots/01-library.jpg) | **No results**: empty state<br>![Empty search](docs/screenshots/02-empty-search.jpg) |
+| **Reader**<br>![Reader](docs/screenshots/03-reader.jpg) | **Continue reading** card and progress<br>![Continue reading](docs/screenshots/06-continue-reading.jpg) |
+| **Sepia theme**, largest text<br>![Sepia](docs/screenshots/04-reader-sepia.jpg) | **Dark theme**, largest text<br>![Dark](docs/screenshots/05-reader-dark.jpg) |
+| **Favorites**<br>![Favorites](docs/screenshots/07-favorites.jpg) | **Error and retry** (simulated failure)<br>![Error](docs/screenshots/08-error-retry.jpg) |
+
+## Demo video
+
+[Two-minute walkthrough on iOS](docs/demo/bedtime-stories-demo-ios.mp4): search, filters, reading a long story, text size and themes, favorites, reopening the app where you left off, and the error and retry flow.
+
 ## Requirements
 
 | Tool | Version |
