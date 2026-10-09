@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   AppState,
   Pressable,
@@ -62,6 +68,11 @@ export function ReaderScreen({ storyId, onBack }: ReaderScreenProps) {
   return <StoryReader storyId={story.id} onBack={onBack} />;
 }
 
+/** How far the real offset may be from the anchored one before we correct it. */
+const SETTLE_TOLERANCE_PX = 2;
+const MAX_SETTLE_RETRIES = 3;
+const SETTLE_RETRY_MS = 150;
+
 function StoryReader({ storyId, onBack }: ReaderScreenProps) {
   const dispatch = useAppDispatch();
   const store = useAppStore();
@@ -87,16 +98,37 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
   const anchorRatio = useRef(0);
   const settling = useRef(false);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const settleRetries = useRef(0);
   const previousFontScale = useRef(fontScale);
 
   const endSettlingAfter = useCallback((ms: number) => {
     if (settleTimer.current) {
       clearTimeout(settleTimer.current);
     }
-    settleTimer.current = setTimeout(() => {
+    settleRetries.current = 0;
+    const settle = () => {
+      const content = contentHeight.current;
+      const target = Math.min(
+        anchorRatio.current * content,
+        Math.max(0, content - viewportHeight.current),
+      );
+      // A scrollTo can land before the native view has grown and get clamped to
+      // the old, shorter limit. Now that the layout is quiet, check where we
+      // really are and ask again if we are not at the anchored passage.
+      if (
+        content > 0 &&
+        Math.abs(offsetY.current - target) > SETTLE_TOLERANCE_PX &&
+        settleRetries.current < MAX_SETTLE_RETRIES
+      ) {
+        settleRetries.current += 1;
+        scrollRef.current?.scrollTo({ y: target, animated: false });
+        settleTimer.current = setTimeout(settle, SETTLE_RETRY_MS);
+        return;
+      }
       settling.current = false;
       settleTimer.current = null;
-    }, ms);
+    };
+    settleTimer.current = setTimeout(settle, ms);
   }, []);
 
   const currentFraction = useCallback(() => {
@@ -165,8 +197,13 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
       const { contentOffset, contentSize, layoutMeasurement } =
         event.nativeEvent;
       offsetY.current = contentOffset.y;
-      contentHeight.current = contentSize.height;
-      viewportHeight.current = layoutMeasurement.height;
+      // While the text re-lays out, the scroll view keeps reporting the previous
+      // content height for a moment. Trust the height from onContentSizeChange
+      // until the layout has settled.
+      if (!settling.current) {
+        contentHeight.current = contentSize.height;
+        viewportHeight.current = layoutMeasurement.height;
+      }
       if (restored.current && !settling.current) {
         anchorRatio.current =
           contentSize.height > 0 ? contentOffset.y / contentSize.height : 0;
@@ -210,8 +247,9 @@ function StoryReader({ storyId, onBack }: ReaderScreenProps) {
 
   // A new font scale means the text is about to be re-laid out. Start ignoring
   // scroll events for the position until the layout has settled. The timer
-  // covers the case where no size change is reported at all.
-  useEffect(() => {
+  // covers the case where no size change is reported at all. A layout effect
+  // (not a passive one) so the flag is set before any native event can arrive.
+  useLayoutEffect(() => {
     if (previousFontScale.current === fontScale) {
       return;
     }

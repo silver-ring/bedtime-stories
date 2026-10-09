@@ -309,8 +309,9 @@ describe('ReaderScreen', () => {
 
     const saved = store.getState().progress.byStoryId.hare;
     expect(saved?.completed).toBe(false);
-    // Halfway through 1600 px of text on a 500 px screen: 800 / 1100.
-    expect(saved?.fraction).toBeCloseTo(800 / 1100);
+    // The transitional event said 1600 px but the layout never reported that
+    // size, so the height stays 2000: halfway is 1000 of 1500 scrollable.
+    expect(saved?.fraction).toBeCloseTo(1000 / 1500);
   });
 
   it('does not create an empty progress entry for a story that was only opened', async () => {
@@ -325,5 +326,79 @@ describe('ReaderScreen', () => {
     });
 
     expect(store.getState().progress.byStoryId.hare).toBeUndefined();
+  });
+
+  it('retries the scroll when it landed short, using the layout height and not a stale event height', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
+    const store = await loadedStore();
+    await renderWithStore(
+      <ReaderScreen storyId="hare" onBack={jest.fn()} />,
+      store,
+    );
+
+    const scroll = await layOut(2000, 500);
+    await fireEvent.scroll(scroll, metrics(1000, 2000, 500));
+    await fireEvent.press(screen.getByLabelText('Reading settings'));
+    await fireEvent.press(screen.getByLabelText('Increase text size'));
+    await fireEvent(scroll, 'contentSizeChange', 390, 2600);
+    // The scroll view clamped to its old limit and still reports the old height.
+    await fireEvent.scroll(scroll, metrics(1500, 2000, 500));
+    scrollTo.mockClear();
+
+    await act(async () => {
+      await new Promise<void>(resolve => setTimeout(resolve, 600));
+    });
+
+    // 1000/2000 of the new 2600 px, not of the stale 2000 px.
+    expect(scrollTo).toHaveBeenCalledWith({ y: 1300, animated: false });
+    scrollTo.mockRestore();
+  });
+
+  it('does not keep scrolling when it already landed on the anchored passage', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
+    const store = await loadedStore();
+    await renderWithStore(
+      <ReaderScreen storyId="hare" onBack={jest.fn()} />,
+      store,
+    );
+
+    const scroll = await layOut(2000, 500);
+    await fireEvent.scroll(scroll, metrics(1000, 2000, 500));
+    await fireEvent.press(screen.getByLabelText('Reading settings'));
+    await fireEvent.press(screen.getByLabelText('Increase text size'));
+    await fireEvent(scroll, 'contentSizeChange', 390, 2600);
+    await fireEvent.scroll(scroll, metrics(1300, 2600, 500));
+    scrollTo.mockClear();
+
+    await act(async () => {
+      await new Promise<void>(resolve => setTimeout(resolve, 600));
+    });
+
+    expect(scrollTo).not.toHaveBeenCalled();
+    scrollTo.mockRestore();
+  });
+
+  it('gives up after a few retries instead of scrolling forever', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo');
+    const store = await loadedStore();
+    await renderWithStore(
+      <ReaderScreen storyId="hare" onBack={jest.fn()} />,
+      store,
+    );
+
+    const scroll = await layOut(2000, 500);
+    await fireEvent.scroll(scroll, metrics(1000, 2000, 500));
+    await fireEvent.press(screen.getByLabelText('Reading settings'));
+    await fireEvent.press(screen.getByLabelText('Increase text size'));
+    await fireEvent(scroll, 'contentSizeChange', 390, 2600);
+    await fireEvent.scroll(scroll, metrics(900, 2600, 500));
+    scrollTo.mockClear();
+
+    await act(async () => {
+      await new Promise<void>(resolve => setTimeout(resolve, 1500));
+    });
+
+    expect(scrollTo.mock.calls.length).toBeLessThanOrEqual(3);
+    scrollTo.mockRestore();
   });
 });
